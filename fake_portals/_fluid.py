@@ -47,6 +47,8 @@ def fluid_step(
     title: str,
     fields_html: str,
     next_url: str,
+    *,
+    info_only: bool = False,
 ) -> str:
     """Return an HTML page for a PeopleSoft-style wizard step.
 
@@ -54,7 +56,12 @@ def fluid_step(
       - 'Save' button: visible on load, onclick hides self + shows Next
       - 'Next' button: hidden on load, onclick navigates to next_url
     Both are <a role="button"> so fluid.button_visible() finds them by text.
+
+    `info_only=True` renders an auto-saving step (e.g. a Welcome/intro page):
+    'Next' is visible from the start so an adapter can advance with a direct
+    Next click, without a Save first.
     """
+    next_style = "cursor:pointer" if info_only else "cursor:pointer;display:none"
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><title>Step {step_n}: {title}</title></head>
@@ -64,7 +71,7 @@ def fluid_step(
 <div style="margin-top:20px">
   <a id="__save" role="button" style="cursor:pointer;margin-right:12px">Save</a>
   <a id="__next" role="button" href="{next_url}"
-     style="cursor:pointer;display:none">Next</a>
+     style="{next_style}">Next</a>
   <a role="button" href="javascript:history.back()"
      style="cursor:pointer;margin-left:12px">Previous</a>
 </div>
@@ -99,9 +106,16 @@ def make_fluid_login_page(
 </html>"""
 
 
-def step_handler(step_n: int, title: str, fields_html: str, next_url: str):
+def step_handler(
+    step_n: int,
+    title: str,
+    fields_html: str,
+    next_url: str,
+    *,
+    info_only: bool = False,
+):
     """aiohttp GET handler for a wizard step page."""
-    html = fluid_step(step_n, title, fields_html, next_url)
+    html = fluid_step(step_n, title, fields_html, next_url, info_only=info_only)
 
     async def handler(request: web.Request) -> web.Response:
         return web.Response(text=html, content_type="text/html")

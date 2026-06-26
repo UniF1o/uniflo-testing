@@ -207,10 +207,15 @@ _ADDRESS_MODAL = """<!DOCTYPE html>
 </table>
 <script>
 function pick() {
-  try {
-    window.parent.document.querySelectorAll('iframe[name^="ptModFrame"]')
-        .forEach(function(f) { f.remove(); });
-  } catch(e) {}
+  // Defer removal so the adapter's js_click evaluate (running el.click() in
+  // THIS frame) returns before the iframe detaches — mirrors the portal's
+  // async AJAX modal close.
+  setTimeout(function() {
+    try {
+      window.parent.document.querySelectorAll('iframe[name^="ptModFrame"]')
+          .forEach(function(f) { f.remove(); });
+    } catch(e) {}
+  }, 50);
 }
 </script>
 </body>
@@ -232,10 +237,14 @@ function showComplete() {
   document.getElementById('#ICOK').style.display = '';
 }
 function closeModal() {
-  try {
-    window.parent.document.querySelectorAll('iframe[name^="ptModFrame"]')
-        .forEach(function(f) { f.remove(); });
-  } catch(e) {}
+  // Deferred so the adapter's js_click(Done) evaluate returns before the
+  // iframe detaches (see the address modal's pick() for the rationale).
+  setTimeout(function() {
+    try {
+      window.parent.document.querySelectorAll('iframe[name^="ptModFrame"]')
+          .forEach(function(f) { f.remove(); });
+    } catch(e) {}
+  }, 50);
 }
 </script>
 </body>
@@ -497,8 +506,15 @@ def make_wits_app() -> web.Application:
     app.router.add_get("/modal/upload-wits", html_handler(_WITS_UPLOAD_MODAL))
     app.router.add_get("/complete", complete)
 
+    # Info-only steps the adapter advances with a direct Next (no Save first),
+    # so their Next must be visible on load: 1 (Welcome), 14 (Indemnity),
+    # 15 (Payment).
+    _INFO_ONLY_STEPS = {1, 14, 15}
     for n, title, fields in _STEPS:
         next_url = f"/step/{n+1}" if n < 17 else "/complete"
-        app.router.add_get(f"/step/{n}", step_handler(n, title, fields, next_url))
+        app.router.add_get(
+            f"/step/{n}",
+            step_handler(n, title, fields, next_url, info_only=(n in _INFO_ONLY_STEPS)),
+        )
 
     return app

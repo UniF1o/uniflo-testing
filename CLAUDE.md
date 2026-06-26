@@ -54,12 +54,14 @@ cd C:\Users\andzi\Desktop\UniFlo\uniflo-testing
 
 ## Expected results
 
-| Test | Expected |
-|------|---------|
-| `test_uj_fills_form` | PASS — UJ fake is fully implemented |
-| `test_uct_fills_form` | PASS — UCT fake covers all 14 wizard steps |
-| `test_wits_fills_form` | XFAIL (acceptable) — complex login + address modal |
-| `test_up_fills_form` | XFAIL (acceptable) — postcode modal + complex login |
+All four pass (`4 passed` — ~5 min headless):
+
+| Test | Covers |
+|------|--------|
+| `test_uj_fills_form` | ITS Integrator multi-page form + LOV popups + subject loop |
+| `test_uct_fills_form` | PeopleSoft Fluid 13 steps, phone + Gr11/Gr12 subject modals, upload |
+| `test_wits_fills_form` | Two-phase Create-ID login + 17-step wizard + address modal + upload |
+| `test_up_fills_form` | New-application login + single-page wizard (postcode/choice modals) + upload |
 
 ## File structure
 
@@ -79,19 +81,25 @@ uniflo-testing/
 └── tests/
     ├── test_uj.py
     ├── test_uct.py
-    ├── test_wits.py        # xfail(strict=False)
-    └── test_up.py          # xfail(strict=False)
+    ├── test_wits.py
+    └── test_up.py
 ```
 
-## Improving Wits / UP (promoting xfail → pass)
+## Fake-portal gotchas (lessons from making all four pass)
 
-Both Wits and UP fakes are architecturally correct but a few interactions may
-need tuning based on actual adapter behaviour:
-
-- **Wits**: The address search modal in step 7 needs to close correctly after
-  `VC_OA_WRK_SELECT$0` is clicked. Run with `-s` to see where it stops.
-
-- **UP**: `_section_contact` calls `_set_city` which opens a postcode modal.
-  The fake serves `/modal/postcode` with a `SELECT_BTN$0` row. If it fails,
-  check that `UP_MAPPING` does NOT include `postal_code`/`suburb`/`city` (so
-  `_set_city` raises `ValidationFailedError` early) — or complete the modal.
+- **Modal close must be async.** A modal's confirm/select button that the
+  adapter clicks via `fluid.js_click(frame, …)` must NOT remove its own iframe
+  synchronously — the `evaluate` then fails with "Frame was detached". Defer the
+  removal with `setTimeout(…, 50)` (mirrors the portal's AJAX close).
+- **Label association.** Adapters match selects/inputs by
+  `el.labels[0].textContent.trim() === label`. A wrapping `<label>` works for an
+  **input** (no text content) but breaks a **select** (its option text pollutes
+  `textContent`) — use `<label for="id">Text</label><select id="id">` for selects.
+- **Info-only steps.** Steps the adapter advances with a direct `Next` (no Save
+  first — Welcome/Indemnity/Payment) need `step_handler(..., info_only=True)` so
+  the Next button is visible on load.
+- **Single visible button per text.** `fluid.click_button(page, "Go")` hits the
+  first *visible* match — toggle inactive sections to `display:none` so only one
+  "Go"/"Next" is visible at a time.
+- **Search modals** need a `submitAction_win0(form, id)` function (the adapter
+  calls it to run the PeopleSoft search) and result rows keyed by `SELECT_BTN$n`.

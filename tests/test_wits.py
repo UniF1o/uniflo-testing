@@ -1,8 +1,9 @@
 """Test Wits adapter against the fake PeopleSoft Fluid portal.
 
-Marked xfail(strict=False): the login + wizard flow is complex and some
-steps may not yet be fully faked. Remove the xfail once the test passes
-consistently.
+Covers the full walk: the two-phase Create Application ID login (captcha
+decoded from image filenames + email challenge + forced password set), the
+17-step wizard (info-only steps 1/14/15, the Gr11 subject grid, address-search
+modal), and the document upload modal.
 """
 
 import uuid
@@ -39,7 +40,6 @@ def wits_docs(tmp_path: pytest.TempPathFactory) -> list[DocumentRef]:
     ]
 
 
-@pytest.mark.xfail(strict=False, reason="Wits login/wizard may not be fully faked yet")
 async def test_wits_fills_form(wits_url: str, wits_docs: list[DocumentRef]) -> None:
     """Wits adapter runs login → fill_form → upload_documents against the fake
     portal and reports RunOutcome.FILLED (allow_submit=False)."""

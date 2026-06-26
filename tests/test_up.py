@@ -1,8 +1,9 @@
 """Test UP adapter against the fake PeopleSoft Fluid portal.
 
-Marked xfail(strict=False): UP's login (new-application form + captcha +
-email challenge + password change) and Contact Details (postcode modal)
-are complex. Remove the xfail once the test passes consistently.
+Covers the full walk: the new-application form (captcha decoded from image
+filenames) + email challenge + sign-in, then the single-page wizard's
+sections — Contact Details (postcode modal), Secondary subjects grid, Study
+Choice (programme search modal) — and the document upload modal.
 """
 
 import uuid
@@ -39,7 +40,6 @@ def up_docs(tmp_path: pytest.TempPathFactory) -> list[DocumentRef]:
     ]
 
 
-@pytest.mark.xfail(strict=False, reason="UP login/wizard may not be fully faked yet")
 async def test_up_fills_form(up_url: str, up_docs: list[DocumentRef]) -> None:
     """UP adapter runs login → fill_form → upload_documents against the fake
     portal and reports RunOutcome.FILLED (allow_submit=False)."""

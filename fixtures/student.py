@@ -134,24 +134,29 @@ UCT_MAPPING = FieldMapping(values={
     if k not in _UCT_EXCLUDED
 })
 
+_WITS_EXCLUDED = {"school"}  # omit → _step_secondary skips the _find_school modal
 WITS_MAPPING = FieldMapping(values={
-    **_BASE,
-    "programme": "Computer Science",
-    # Wits _step_personal uses label-driven title/gender selects
-    "title": "Mr",
-    "gender": "Male",
-    # Wits NOK (required)
-    "nok_surname": "Dlamini",
-    "nok_phone": "0831234567",
-    "nok_email": "nomvula@uniflo-test.invalid",
-    # Wits _step_demographics
-    "marital_status": "Single",
-    "home_language": "English",
-    "population_group": "Black",
-    # school omitted → skip _find_school modal in step 4
+    k: v for k, v in {
+        **_BASE,
+        "programme": "Computer Science",
+        # Wits _step_personal uses label-driven title/gender selects
+        "title": "Mr",
+        "gender": "Male",
+        # Wits NOK (required)
+        "nok_surname": "Dlamini",
+        "nok_phone": "0831234567",
+        "nok_email": "nomvula@uniflo-test.invalid",
+        # Wits _step_demographics
+        "marital_status": "Single",
+        "home_language": "English",
+        "population_group": "Black",
+    }.items()
+    if k not in _WITS_EXCLUDED
 })
 
-_UP_EXCLUDED = {"suburb", "city", "postal_code", "school"}
+# suburb/city/postal_code are kept — _section_contact resolves them via the
+# postcode modal. school is omitted so _section_secondary skips _find_school.
+_UP_EXCLUDED = {"school"}
 UP_MAPPING = FieldMapping(values={
     k: v for k, v in {
         **_BASE,
@@ -187,7 +192,8 @@ WITS_CREDS = PortalCredentials(
     password="Test123!",
     extra={
         "nationality": "South Africa",
-        "national_id": "0001015009087",
+        # adapter reads extra["id_number"] (the form field is named national_id)
+        "id_number": "0001015009087",
         "title": "Mr",
         "first_name": "Thabo",
         "middle_names": "Sipho",
