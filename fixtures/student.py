@@ -5,8 +5,7 @@ serve, so best_subject_match / best_option_match / best_programme_match all
 find a hit.
 """
 
-from dataclasses import dataclass
-from app.automation.base import DocumentRef, FieldMapping, PortalCredentials
+from app.automation.base import FieldMapping, PortalCredentials
 from app.automation.challenge import ChallengeRequest
 
 

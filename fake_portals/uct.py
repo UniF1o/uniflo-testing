@@ -11,9 +11,8 @@ upload_documents (step 14) requires a dummy SA-ID document file — the test
 fixture supplies one via DocumentRef.
 """
 
-import json
 from aiohttp import web
-from fake_portals._fluid import fluid_step, step_handler, upload_modal_html
+from fake_portals._fluid import step_handler, upload_modal_html
 
 # ---------------------------------------------------------------------------
 # Login / homepage / application-start pages

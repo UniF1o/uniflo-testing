@@ -1,6 +1,5 @@
 """Shared pytest fixtures: sys.path wiring, browser session, server helpers."""
 
-import asyncio
 import socket
 import sys
 from pathlib import Path

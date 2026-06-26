@@ -1,0 +1,119 @@
+name: Fake-portal adapter tests
+
+# Runs the real uniflo-api Playwright adapters against the local fake portals,
+# so every adapter (and every new one) is exercised end-to-end through
+# login -> fill_form -> upload_documents without touching a real university
+# site or spending Claude API credit.
+#
+# Triggers:
+#   - push / pull_request to this repo  -> validate fake-portal + fixture changes
+#   - schedule (weekly)                 -> catch drift when uniflo-api adapters
+#                                          change but this repo doesn't
+#   - workflow_dispatch                 -> test against an arbitrary uniflo-api
+#                                          ref (e.g. a branch adding a new adapter)
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 4 * * 1" # Mondays 04:00 UTC
+  workflow_dispatch:
+    inputs:
+      uniflo_api_ref:
+        description: "uniflo-api branch/tag/SHA to test against"
+        required: false
+        default: "main"
+
+# A newer push to the same branch supersedes an in-flight run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check .
+
+  test:
+    name: Fake-portal adapter tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      # The tests drive fake portals with allow_submit=False and never touch the
+      # real DB / Supabase, but importing the adapters pulls in app.config, whose
+      # Settings model has required fields — these dummy values just let it
+      # validate. They are NOT secrets and must stay fake.
+      DATABASE_URL: "postgresql://user:pass@localhost:5432/test"
+      SUPABASE_URL: "https://example.supabase.co"
+      SUPABASE_ANON_KEY: "ci-dummy"
+      SUPABASE_JWT_SECRET: "ci-dummy"
+      SUPABASE_STORAGE_BUCKET: "ci-dummy"
+      WEBHOOK_SECRET: "ci-dummy"
+      DELETE_WEBHOOK_SECRET: "ci-dummy"
+      SENTRY_DSN: ""
+      ENVIRONMENT: "test"
+      FAKE_AUTOMATION: "true"
+    steps:
+      - name: Check out uniflo-testing
+        uses: actions/checkout@v4
+        with:
+          path: uniflo-testing
+
+      # conftest.py adds ../uniflo-api to sys.path, so uniflo-api must sit beside
+      # uniflo-testing in the workspace. It's a separate (private) repo, so this
+      # needs a token with read access — set the UNIFLO_API_TOKEN secret to a
+      # PAT / fine-grained token scoped to UniF1o/uniflo-api. (If uniflo-api is
+      # public, the default github.token fallback is enough.)
+      - name: Check out uniflo-api (sibling)
+        uses: actions/checkout@v4
+        with:
+          repository: UniF1o/uniflo-api
+          ref: ${{ github.event.inputs.uniflo_api_ref || 'main' }}
+          token: ${{ secrets.UNIFLO_API_TOKEN || github.token }}
+          path: uniflo-api
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            uniflo-api/requirements.txt
+            uniflo-api/requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Runtime deps (incl. the pinned Playwright) + dev deps (pytest, etc.)
+          # come from uniflo-api so versions match production exactly; aiohttp is
+          # the only test-harness-only dependency.
+          pip install -r uniflo-api/requirements.txt
+          pip install -r uniflo-api/requirements-dev.txt
+          pip install aiohttp
+
+      - name: Resolve Playwright version (for browser cache key)
+        id: pw
+        run: |
+          version=$(python -c "import importlib.metadata as m; print(m.version('playwright'))")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Chromium
+        run: python -m playwright install --with-deps chromium
+
+      - name: Run fake-portal adapter tests
+        working-directory: uniflo-testing
+        run: pytest -v

@@ -17,7 +17,6 @@ upload_documents:
 """
 
 from aiohttp import web
-from fake_portals._fluid import step_handler
 
 _PIXEL_GIF = bytes([
     0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00,

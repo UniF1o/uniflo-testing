@@ -48,9 +48,26 @@ cd C:\Users\andzi\Desktop\UniFlo\uniflo-testing
 "C:\Users\andzi\Desktop\UniFlo\uniflo-api\.venv\Scripts\python.exe" -m pytest tests/test_uj.py -v
 "C:\Users\andzi\Desktop\UniFlo\uniflo-api\.venv\Scripts\python.exe" -m pytest tests/test_uct.py -v
 
-# Show output for xfail tests
-"C:\Users\andzi\Desktop\UniFlo\uniflo-api\.venv\Scripts\python.exe" -m pytest tests/test_wits.py -v -s
+# Verbose live logs (see exactly which step an adapter stops on)
+"C:\Users\andzi\Desktop\UniFlo\uniflo-api\.venv\Scripts\python.exe" -m pytest tests/test_wits.py -v -s --log-cli-level=INFO
 ```
+
+## CI
+
+`.github/workflows/fake-portal-tests.yml` runs the whole suite on every push/PR,
+weekly on a schedule, and on manual dispatch. It checks out **both** repos as
+siblings (uniflo-api beside uniflo-testing, the layout `conftest.py` expects),
+installs uniflo-api's pinned deps + Playwright Chromium, and runs `pytest`.
+
+- **Cross-repo checkout:** uniflo-api is a separate private repo, so the workflow
+  needs a token with read access to it — set the `UNIFLO_API_TOKEN` repo secret
+  to a PAT / fine-grained token scoped to `UniF1o/uniflo-api`. (Falls back to the
+  default `github.token`, which only works if uniflo-api is public.)
+- **Dummy settings:** importing the adapters pulls in `app.config.Settings`
+  (required fields), so the workflow sets fake `DATABASE_URL`/`SUPABASE_*`/etc.
+  env vars. They must stay fake — the tests never touch the real DB/Supabase.
+- **Testing a new adapter:** run the workflow via *Actions → Run workflow* and
+  set the `uniflo_api_ref` input to the uniflo-api branch that adds it.
 
 ## Expected results
 
