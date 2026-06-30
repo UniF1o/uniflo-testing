@@ -23,6 +23,13 @@ branches will ship untested offline unless the fakes replicate their conditional
 - **UP international is signup-gated** — the UP adapter never reaches it. UP gets the **upgrading**
   branch only; no international fake/fixture/test for UP.
 - **Stellenbosch** has no adapter — out of scope.
+- **Grade 10 / Grade 11 / at-university are profile-only** (apply-blocked in the frontend/guard) —
+  they never reach an adapter, so **no fake-portal flow, fixture, or harness test** is needed for
+  them here. The adapter-reaching new branches are only: international (UJ/UCT/Wits) and upgrading
+  (UJ/UCT/Wits/UP).
+- **September prelims (`grade_12_september`)** are just additional interim subject marks the mapper
+  merges — no new fake reveal. A completed/upgrading fixture **may** carry a prelim record to
+  exercise the merge, but the fakes need no new page for it.
 
 ---
 
