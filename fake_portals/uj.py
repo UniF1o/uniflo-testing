@@ -265,11 +265,32 @@ async def handle_page_a(request: web.Request) -> web.Response:
     </select></label></p>
   <p><label>ID Number <input type="text" id="oapIDnumber" name="oapIDnumber"></label></p>
   <p><label>Citizenship Code """ + _lov_trigger("oapCitzCode", "Citizenship") + """</label></p>
-  <p style="display:none"><label>Gender
-    <select id="oapGender" name="oapGender" style="display:none">
+  <p id="oapPPnumberRow" style="display:none"><label>Passport Number
+    <input type="text" id="oapPPnumber" name="oapPPnumber"></label></p>
+  <p id="oapStudyPermitRow" style="display:none"><label>Study permit / visa type
+    <select id="oapStudyPermit" name="oapStudyPermit">
+      <option value="">--</option>
+      <option>Study Visa</option><option>Permanent Residence Permit</option>
+      <option>Refugee Permit</option><option>Asylum Seeker Permit</option>
+      <option>Relatives Permit</option><option>Other</option>
+    </select></label></p>
+  <p id="oapGenderRow" style="display:none"><label>Gender
+    <select id="oapGender" name="oapGender">
       <option value="">--</option>
       <option>F Female</option><option>M Male</option>
     </select></label></p>
+  <script>
+  (function(){
+    var citz = document.getElementById('oapCitizenType');
+    var rows = ['oapPPnumberRow','oapStudyPermitRow','oapGenderRow']
+      .map(function(id){ return document.getElementById(id); });
+    // International (oapCitizenType=No) reveals passport + study-permit + gender.
+    citz.addEventListener('change', function(){
+      var intl = (citz.value || '').trim() === 'No';
+      rows.forEach(function(r){ if (r) r.style.display = intl ? '' : 'none'; });
+    });
+  })();
+  </script>
   <p><label>Date of Birth (DD-MON-YYYY)
     <input type="text" id="oapBirthdate" name="oapBirthdate" readonly></label></p>
   <p><label>Title

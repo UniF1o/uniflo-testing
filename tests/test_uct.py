@@ -10,7 +10,7 @@ from app.automation.runtime import run_job
 from app.automation.results import RunOutcome
 from conftest import start_server
 from fake_portals.uct import make_uct_app
-from fixtures.student import UCT_CREDS, UCT_MAPPING
+from fixtures.student import UCT_CREDS, UCT_INTL_MAPPING, UCT_MAPPING
 
 
 @pytest.fixture
@@ -41,6 +41,34 @@ async def test_uct_fills_form(uct_url: str, dummy_id_doc: DocumentRef) -> None:
             adapter,
             credentials=UCT_CREDS,
             mapping=UCT_MAPPING,
+            documents=[dummy_id_doc],
+            allow_submit=False,
+            headless=True,
+        )
+
+    assert result.outcome == RunOutcome.FILLED, (
+        f"Expected FILLED, got {result.outcome}; failure={result.failure}"
+    )
+    assert result.failure is None
+
+
+async def test_uct_international_fills_form(
+    uct_url: str, dummy_id_doc: DocumentRef
+) -> None:
+    """International applicant: Step-2 citizenship 'International (Non-SA
+    Citizen)' hides the SA-ID field and reveals the Passport Information add-row
+    table; the adapter fills the passport modal (Country / Citizenship Status /
+    Passport Number) and completes the wizard."""
+    with (
+        mock.patch.object(uct_mod, "LOGIN_URL", uct_url + "/login"),
+        mock.patch.object(uct_mod, "CREATE_ACCOUNT_URL", uct_url + "/login"),
+    ):
+        from app.automation.adapters.uct import UCTAdapter
+        adapter = UCTAdapter()
+        result = await run_job(
+            adapter,
+            credentials=UCT_CREDS,
+            mapping=UCT_INTL_MAPPING,
             documents=[dummy_id_doc],
             allow_submit=False,
             headless=True,

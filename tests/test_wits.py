@@ -17,7 +17,12 @@ from app.automation.runtime import run_job
 from app.automation.results import RunOutcome
 from conftest import start_server
 from fake_portals.wits import make_wits_app
-from fixtures.student import WITS_CREDS, WITS_FAKE_CHALLENGE, WITS_MAPPING
+from fixtures.student import (
+    WITS_CREDS,
+    WITS_FAKE_CHALLENGE,
+    WITS_INTL_CREDS,
+    WITS_MAPPING,
+)
 
 
 @pytest.fixture
@@ -55,6 +60,36 @@ async def test_wits_fills_form(wits_url: str, wits_docs: list[DocumentRef]) -> N
         result = await run_job(
             adapter,
             credentials=WITS_CREDS,
+            mapping=WITS_MAPPING,
+            documents=wits_docs,
+            allow_submit=False,
+            headless=True,
+        )
+
+    assert result.outcome == RunOutcome.FILLED, (
+        f"Expected FILLED, got {result.outcome}; failure={result.failure}"
+    )
+    assert result.failure is None
+
+
+async def test_wits_international_fills_form(
+    wits_url: str, wits_docs: list[DocumentRef]
+) -> None:
+    """International applicant: a non-SA nationality in Create Application ID
+    flips the National ID Type to passport, which receives the passport number
+    (credentials carry no SA id_number). The wizard then completes as usual."""
+    app_uuid = uuid.uuid4()
+    with mock.patch.object(wits_mod, "LOGIN_URL", wits_url + "/"):
+        from app.automation.adapters.wits import WitsAdapter
+        adapter = WitsAdapter()
+        adapter.set_challenge_source(
+            WITS_FAKE_CHALLENGE,
+            application_id=app_uuid,
+            applicant_email=WITS_INTL_CREDS.extra["email"],
+        )
+        result = await run_job(
+            adapter,
+            credentials=WITS_INTL_CREDS,
             mapping=WITS_MAPPING,
             documents=wits_docs,
             allow_submit=False,
