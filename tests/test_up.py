@@ -17,7 +17,12 @@ from app.automation.runtime import run_job
 from app.automation.results import RunOutcome
 from conftest import start_server
 from fake_portals.up import make_up_app
-from fixtures.student import UP_CREDS, UP_FAKE_CHALLENGE, UP_MAPPING
+from fixtures.student import (
+    UP_CREDS,
+    UP_FAKE_CHALLENGE,
+    UP_MAPPING,
+    UP_UPGRADING_MAPPING,
+)
 
 
 @pytest.fixture
@@ -56,6 +61,36 @@ async def test_up_fills_form(up_url: str, up_docs: list[DocumentRef]) -> None:
             adapter,
             credentials=UP_CREDS,
             mapping=UP_MAPPING,
+            documents=up_docs,
+            allow_submit=False,
+            headless=True,
+        )
+
+    assert result.outcome == RunOutcome.FILLED, (
+        f"Expected FILLED, got {result.outcome}; failure={result.failure}"
+    )
+    assert result.failure is None
+
+
+async def test_up_upgrading_fills_form(
+    up_url: str, up_docs: list[DocumentRef]
+) -> None:
+    """Upgrading applicant: the data-driven Secondary/Demographic sections
+    select the repeating 'Tell us more', Grade 12 highest grade, and the
+    Bachelor's exemption — no adapter code change, just the new option values."""
+    app_uuid = uuid.uuid4()
+    with mock.patch.object(up_mod, "PORTAL_URL", up_url + "/"):
+        from app.automation.adapters.up import UPAdapter
+        adapter = UPAdapter()
+        adapter.set_challenge_source(
+            UP_FAKE_CHALLENGE,
+            application_id=app_uuid,
+            applicant_email=UP_CREDS.extra["email"],
+        )
+        result = await run_job(
+            adapter,
+            credentials=UP_CREDS,
+            mapping=UP_UPGRADING_MAPPING,
             documents=up_docs,
             allow_submit=False,
             headless=True,

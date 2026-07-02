@@ -110,7 +110,9 @@ _STEP2_FIELDS = """
     <option value="">--</option>
     <option>SA Citizen</option>
     <option>Permanent Resident</option>
-    <option>Foreign National</option>
+    <option>International (Non-SA Citizen)</option>
+    <option>Refugee</option>
+    <option>Asylum Seeker</option>
   </select>
 </p>
 <p>
@@ -122,10 +124,42 @@ _STEP2_FIELDS = """
     <option>Prefer not to say</option>
   </select>
 </p>
-<p>
+<p id="s2-id-block">
   <label for="s2-id">*SA ID Number</label>
   <input id="s2-id" type="text">
-</p>"""
+</p>
+<div id="s2-passport-block" style="display:none">
+  <h3>Passport Information</h3>
+  <button type="button" id="s2-add-passport"
+          onclick="openPassportModal()">Add Passport Information</button>
+</div>
+<script>
+(function(){
+  var citz = document.getElementById('s2-citz');
+  var idBlock = document.getElementById('s2-id-block');
+  var ppBlock = document.getElementById('s2-passport-block');
+  function sync(){
+    // Any non-SA-citizen / non-PR residency status swaps the SA-ID block for
+    // the Passport Information add-row table (mirrors the live AJAX reveal).
+    var v = citz.value || '';
+    var intl = v.indexOf('International') === 0
+            || v === 'Refugee' || v === 'Asylum Seeker';
+    idBlock.style.display = intl ? 'none' : '';
+    ppBlock.style.display = intl ? '' : 'none';
+  }
+  citz.addEventListener('change', sync);
+  sync();
+})();
+function openPassportModal(){
+  document.querySelectorAll('iframe[name^="ptModFrame"]').forEach(function(f){f.remove();});
+  var iframe = document.createElement('iframe');
+  iframe.name = 'ptModFrame_0';
+  iframe.src = '/modal/passport';
+  iframe.style.cssText = 'position:fixed;top:50px;left:50px;width:440px;height:320px;'
+    + 'z-index:9999;background:white;border:2px solid #333';
+  document.body.appendChild(iframe);
+}
+</script>"""
 
 # Step 3: Contact Details
 _STEP3_FIELDS = """
@@ -474,6 +508,45 @@ _SUBJECT_GR12_MODAL_HTML = """<!DOCTYPE html>
 """ + _SUBJECT_MODAL_CLOSE_JS + "</body></html>"
 
 
+_PASSPORT_MODAL_HTML = """<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head><body>
+<h3>Passport Information</h3>
+<p>
+  <label for="pm-country">*Country</label>
+  <select id="pm-country">
+    <option value=""></option>
+    <option>Zimbabwe</option><option>Zambia</option><option>Botswana</option>
+    <option>Namibia</option><option>Nigeria</option><option>South Africa</option>
+  </select>
+</p>
+<p>
+  <label for="pm-citz">*Citizenship Status</label>
+  <select id="pm-citz">
+    <option value=""></option>
+    <option>Citizen</option><option>Permanent Resident</option>
+    <option>Temporary Resident</option><option>Unknown</option>
+  </select>
+</p>
+<p>
+  <label for="pm-passport">*Passport Number</label>
+  <input type="text" id="pm-passport">
+</p>
+<button type="button" onclick="savePassport()">Save</button>
+<script>
+function savePassport() {
+  // Defer removal so click_button's evaluate (which runs el.click() in THIS
+  // frame) can return before the iframe detaches — the async-AJAX-close gotcha.
+  setTimeout(function() {
+    try {
+      window.parent.document.querySelectorAll('iframe[name^="ptModFrame"]')
+        .forEach(function(f){f.remove();});
+    } catch(e){}
+  }, 50);
+}
+</script>
+</body></html>"""
+
+
 async def handle_complete(request: web.Request) -> web.Response:
     html = """<!DOCTYPE html><html><body>
 <h1>Application Submitted (TEST MODE)</h1>
@@ -514,6 +587,9 @@ def make_uct_app() -> web.Application:
     async def phone_modal(r: web.Request) -> web.Response:
         return web.Response(text=_PHONE_MODAL_HTML, content_type="text/html")
 
+    async def passport_modal(r: web.Request) -> web.Response:
+        return web.Response(text=_PASSPORT_MODAL_HTML, content_type="text/html")
+
     app.router.add_get("/login", login_get)
     app.router.add_post("/login", login_post)
     app.router.add_get("/homepage", homepage)
@@ -522,6 +598,7 @@ def make_uct_app() -> web.Application:
     app.router.add_get("/modal/subject-gr11", subject_gr11_modal)
     app.router.add_get("/modal/subject-gr12", subject_gr12_modal)
     app.router.add_get("/modal/phone", phone_modal)
+    app.router.add_get("/modal/passport", passport_modal)
     app.router.add_get("/complete", handle_complete)
 
     for step_n, title, fields, next_url in _STEPS:

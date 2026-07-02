@@ -9,7 +9,7 @@ from app.automation.runtime import run_job
 from app.automation.results import RunOutcome
 from conftest import start_server
 from fake_portals.uj import make_uj_app
-from fixtures.student import UJ_CREDS, UJ_MAPPING
+from fixtures.student import UJ_CREDS, UJ_INTL_MAPPING, UJ_MAPPING
 
 
 @pytest.fixture
@@ -30,6 +30,27 @@ async def test_uj_fills_form(uj_url: str) -> None:
             adapter,
             credentials=UJ_CREDS,
             mapping=UJ_MAPPING,
+            documents=[],
+            allow_submit=False,
+            headless=True,
+        )
+
+    assert result.outcome == RunOutcome.FILLED, (
+        f"Expected FILLED, got {result.outcome}; failure={result.failure}"
+    )
+    assert result.failure is None
+
+
+async def test_uj_international_fills_form(uj_url: str) -> None:
+    """International applicant: oapCitizenType=No reveals the passport + study
+    permit + gender fields, which the adapter fills before reaching Page G."""
+    with mock.patch.object(uj_mod, "ENTRY_URL", uj_url + "/"):
+        from app.automation.adapters.uj import UJAdapter
+        adapter = UJAdapter()
+        result = await run_job(
+            adapter,
+            credentials=UJ_CREDS,
+            mapping=UJ_INTL_MAPPING,
             documents=[],
             allow_submit=False,
             headless=True,

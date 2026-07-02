@@ -235,7 +235,10 @@ _WIZARD_PAGE = """<!DOCTYPE html>
   <p><label for="up-tellmore">Tell us more</label>
     <select id="up-tellmore">
       <option value="">--</option>
-      <option>South African Black</option><option>Other</option>
+      <option>I am currently still in high school</option>
+      <option>I am repeating school /subjects</option>
+      <option>I am unemployed and haven't studied before at a tertiary institution</option>
+      <option>I am working/employed and haven't studied before at a tertiary institution</option>
     </select></p>
 </section>
 
@@ -281,6 +284,9 @@ _WIZARD_PAGE = """<!DOCTYPE html>
   <p><label for="up-exemption">Exemption Type</label>
     <select id="up-exemption">
       <option value="">--</option>
+      <option>Currently busy with schooling</option>
+      <option>Admit to Bachelor Studies</option>
+      <option>Admit to Diploma Studies</option>
       <option>Unconditional</option><option>Conditional</option>
     </select></p>
   <button type="button" id="Select School" onclick="void(0)">Select School</button>

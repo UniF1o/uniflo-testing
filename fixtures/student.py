@@ -229,3 +229,51 @@ UP_FAKE_CHALLENGE = FakeEmailChallengeSource({
     "application_id": "APP123456",
     "password": "Test123!",
 })
+
+
+# ---------------------------------------------------------------------------
+# Phase 6 variants: international (passport) + upgrading applicants
+# ---------------------------------------------------------------------------
+
+# UJ international: oapCitizenType=No reveals passport + study-permit + gender.
+UJ_INTL_MAPPING = FieldMapping(values={
+    **UJ_MAPPING.values,
+    "sa_citizen": "No",
+    "citizenship_code": "Zimbabwe",       # non-SA country (UJ LOV option)
+    "passport_number": "ZW1234567",
+    "study_permit": "Study Visa",         # #oapStudyPermit option
+    "gender": "F Female",                 # explicit on the international branch
+})
+
+# UCT international: Step-2 citizenship swaps the SA-ID block for the Passport
+# Information add-row table. sa_id omitted so _step2_personal takes the passport
+# branch; passport_citizenship_status fuzzy-falls-back to modal "Citizen".
+UCT_INTL_MAPPING = FieldMapping(values={
+    **{k: v for k, v in UCT_MAPPING.values.items() if k != "sa_id"},
+    "citizenship_type": "International (Non-SA Citizen)",
+    "passport_country": "Zimbabwe",
+    "passport_citizenship_status": "International",
+    "passport_number": "ZW1234567",
+})
+
+# Wits international: a non-SA nationality flips the National ID Type to passport
+# in the Create Application ID form (login), which then receives the passport.
+WITS_INTL_CREDS = PortalCredentials(
+    username="WTS123456",
+    password="Test123!",
+    extra={
+        k: v for k, v in {**WITS_CREDS.extra} .items() if k != "id_number"
+    } | {
+        "nationality": "Zimbabwe",
+        "passport_number": "ZW1234567",
+    },
+)
+
+# UP upgrading: repeats a prior matric — the data-driven Secondary/Demographic
+# sections select the repeating tell_us_more + Bachelor's exemption + Grade 12.
+UP_UPGRADING_MAPPING = FieldMapping(values={
+    **UP_MAPPING.values,
+    "tell_us_more": "I am repeating school /subjects",
+    "highest_grade": "Grade 12",
+    "exemption_type": "Admit to Bachelor Studies",
+})
